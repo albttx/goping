@@ -1,12 +1,8 @@
 package main
 
-import (
-	"fmt"
-
-	"github.com/ale-batt/goping"
-)
+import "github.com/ale-batt/goping"
 
 func main() {
-	fmt.Println("coucou")
-	goping.Ping()
+	goping.Ping("google.fr")
+	goping.Ping("216.58.208.195")
 }
