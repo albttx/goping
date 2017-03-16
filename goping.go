@@ -20,6 +20,7 @@ type Pinger struct {
 	hostname string
 	hostip   string
 	socket   *icmp.PacketConn
+	sendTime time.Time
 }
 
 func newPinger(addr string) *Pinger {
@@ -57,6 +58,7 @@ func (p *Pinger) sendICMP() {
 			log.Fatal(err)
 		}
 
+		p.sendTime = time.Now()
 		cc, err := (p.socket).WriteTo(pkt, &net.IPAddr{IP: net.ParseIP(p.hostip)})
 		if err != nil || cc == 0 {
 			log.Fatal(err)
@@ -66,7 +68,16 @@ func (p *Pinger) sendICMP() {
 	}
 }
 
+func printEchoReply(icmp_h *icmp.Echo) {
+	ip_h, err := ipv4.ParseHeader(icmp_h.Data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf(" icmp_seq=%-3v ttl=%v", icmp_h.Seq, ip_h.TTL)
+}
+
 func (p *Pinger) recvICMP() {
+	var recvTime time.Time
 	buff := make([]byte, 512)
 
 	for {
@@ -79,14 +90,12 @@ func (p *Pinger) recvICMP() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		icmp_h := msg.Body.(*icmp.Echo)
-		ip_h, err := ipv4.ParseHeader(icmp_h.Data)
-		if err != nil {
-			log.Fatal(err)
+		recvTime = time.Now()
+		fmt.Printf("%-3v byes from %s: %.5vms (%v)", cc, peer, recvTime.Sub(p.sendTime), msg.Type)
+		if msg.Type == ipv4.ICMPTypeEchoReply {
+			printEchoReply(msg.Body.(*icmp.Echo))
 		}
-
-		fmt.Println(cc, "bytes from", peer, "icmp_seq=", icmp_h.Seq, "ttl=", ip_h.TTL)
+		fmt.Printf("\n")
 	}
 }
 
